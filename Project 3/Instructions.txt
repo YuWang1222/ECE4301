@@ -1,0 +1,25 @@
+1. Navigate to project folder
+2. Build project if needed by running: cargo build --release
+3. Connect to same WIFI
+4. Run sender verB2 from B's Pi: cargo run --release --bin <sender_file_name>
+5. 
+Then setting up the SSH for secure key exchange:
+From sender pi (B's pi), run the command 
+scp marwah555@<pi2-ip>:/home/marwah555/aes_key.bin /home/bwang/aes_key.bin
+
+where <pi2-ip> is the receiver pi's ip: 172.20.10.3
+
+example command: 
+scp marwah555@172.20.10.3:/home/marwah555/aes_key.bin /home/bwang/aes_key.bin
+
+you can check the ip address by running ifconfig
+6. Run receiver verB2 from M's PI: cargo run --release --bin Receiver256
+7. Run perf tests for 128, 192, 256 key sizes. 
+
+To run the perf test:
+perf stat -e instructions,cycles,cache-misses,branches,branch-misses,cpu-clock,task-clock -p $(pidof <NAME_OF_FILE>) sleep 10
+
+example for SenderV1 file:
+perf stat -e instructions,cycles,cache-misses,branches,branch-misses,cpu-clock,task-clock -p $(pidof SenderV1) sleep 10
+
+NOTE: we're running receiver verB2 and sender verB2
