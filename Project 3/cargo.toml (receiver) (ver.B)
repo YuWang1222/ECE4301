@@ -1,0 +1,11 @@
+[package]
+name = "video_receiver"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+openssl = "0.10"
+opencv = "0.85"
+anyhow = "1.0"
+byteorder = "1.4"
+base64 = "0.21"
