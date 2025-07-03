@@ -1,0 +1,11 @@
+[package]
+name = "video_stream_encryptor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rscam = "0.5"
+anyhow = "1.0"
+openssl = "0.10"
+byteorder = "1.4"
+rand = "0.8"
