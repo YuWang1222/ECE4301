@@ -1,0 +1,1 @@
+scp /home/bwang/aes_key.bin pi@<receiver-ip>:/home/bwang/aes_key.bin
