@@ -1,0 +1,32 @@
+You should have the following folder layout
+quiz2_cryptoengine/
+├── Cargo.toml
+├── message.txt         # Input plaintext file
+└── src/
+    └── bin/
+        ├── aes.rs
+        ├── rsa.rs
+        └── ec.rs
+
+Make sure your Raspberry Pi has the following installed (run these commands in terminal):
+sudo apt update
+sudo apt install -y build-essential pkg-config libssl-dev
+
+Install rust by running these cmds:
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source $HOME/.cargo/env
+
+Then build the project by first navigating into the project directory 
+(meaning you're in the quiz2_cryptoengine folder) and running the cmds:
+
+cargo build --release
+
+then you can run each cryptographic algorithm script by running these commands:
+cargo run --release --bin aes
+cargo run --release --bin rsa
+cargo run --release --bin ec
+
+to run perf test
+sudo perf stat ./target/release/aes
+sudo perf stat ./target/release/rsa
+sudo perf stat ./target/release/ec
