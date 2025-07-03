@@ -1,0 +1,27 @@
+Sender V9 & ReceiverV7
+
+use phone hotspot.
+
+marwah's pi instructions:
+run commands:
+cd final
+ngrok tcp 15762
+
+you should see:  tcp://8.tcp.us-cal-1.ngrok.io:10598 -> localhost:15762                                                             
+                                                                                          
+put localhost number in "port = " in Receiver file
+put 8.tcp.us-cal-1.ngrok.io in receiver_host = in Sender file
+put 10598 in receiver_port = in Sender file
+
+run
+python3 ReceiverV1.py
+
+Then click Start Stream button
+
+Then run sender code using python3
+
+
+For perf testing:
+start script in a terminal
+run this perf test in another terminal:
+perf stat -e instructions,cycles,cache-misses,branches,branch-misses,cpu-clock,task-clock sleep 5
