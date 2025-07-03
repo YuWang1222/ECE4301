@@ -1,0 +1,35 @@
+key=16 bytes
+ Performance counter stats for process id '9752':
+
+     1,405,365,140      cycles                                                                
+       722,156,615      instructions                     #    0.51  insn per cycle            
+        25,094,606      cache-misses                                                          
+             9,733      context-switches                                                      
+       103,215,390      branches                                                              
+         1,694,668      branch-misses                    #    1.64% of all branches           
+
+      10.002115532 seconds time elapsed
+
+key = 24 bytes
+ Performance counter stats for process id '9981':
+
+     1,639,277,184      cycles                                                                
+       752,875,947      instructions                     #    0.46  insn per cycle            
+        26,713,468      cache-misses                                                          
+             8,928      context-switches                                                      
+       105,485,796      branches                                                              
+         1,740,354      branch-misses                    #    1.65% of all branches           
+
+      10.007875511 seconds time elapsed
+
+key = 32 bytes
+ Performance counter stats for process id '10135':
+
+     1,133,739,316      cycles                                                                
+       855,721,827      instructions                     #    0.75  insn per cycle            
+        31,541,392      cache-misses                                                          
+             9,846      context-switches                                                      
+       115,214,631      branches                                                              
+         1,014,083      branch-misses                    #    0.88% of all branches           
+
+      10.010154203 seconds time elapsed
