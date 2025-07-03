@@ -1,0 +1,18 @@
+Run Sender V4 from B's PI
+For the following cmd, be sure to update M's ip num:
+Run scp /home/bwang/aes_key.bin marwah555@172.20.10.2:/home/marwah555/ from B's PI
+Enter Pass1234 as the password
+Run REceiver V5 from M's PI
+
+for wifi:
+use phone hotspot, have both connected to same hotspot
+run ifconfig in terminal to get wlan inet ip
+
+for perf test:
+after starting receiver script in M's Pi,
+run sudo perf stat --timeout 10000 -e cycles,instructions,cache-misses,context-switches,branches,branch-misses -p $(pgrep -f ReceiverV5.py) >> receiver_perf_output.txt 2>&1
+ in M's terminal
+
+this prints the stats for 10s of execution to the file /home/marwah555/receiver_perf_output.txt
+
+everytime you run the command, it appends the stats, so be sure to label it with the key size. 
