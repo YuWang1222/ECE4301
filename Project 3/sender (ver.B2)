@@ -1,0 +1,85 @@
+use anyhow::Result;
+use byteorder::{BigEndian, WriteBytesExt};
+use openssl::symm::{Cipher, Crypter, Mode};
+use rand::Rng;
+use std::fs::File;
+use std::io::{BufReader, Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::process::{Command, Stdio};
+
+const WIDTH: usize = 640;
+const HEIGHT: usize = 480;
+const BLOCK_SIZE: usize = 16;
+
+// YUV420 frame size = width * height * 1.5 (Y + U + V)
+const FRAME_SIZE: usize = WIDTH * HEIGHT * 3 / 2;
+
+fn generate_key() -> Result<Vec<u8>> {
+    let mut key = vec![0u8; BLOCK_SIZE];
+    rand::thread_rng().fill(&mut key[..]);
+    let mut file = File::create("/home/bwang/aes_key.bin")?;
+    file.write_all(&key)?;
+    println!("[Pi #1] AES key saved to /home/bwang/aes_key.bin");
+    Ok(key)
+}
+
+fn encrypt_frame(data: &[u8], key: &[u8]) -> Result<Vec<u8>> {
+    let mut iv = vec![0u8; BLOCK_SIZE];
+    rand::thread_rng().fill(&mut iv[..]);
+
+    let cipher = Cipher::aes_128_cbc();
+    let padding_len = BLOCK_SIZE - (data.len() % BLOCK_SIZE);
+    let mut padded = data.to_vec();
+    padded.extend(vec![padding_len as u8; padding_len]);
+
+    let mut crypter = Crypter::new(cipher, Mode::Encrypt, key, Some(&iv))?;
+    let mut ciphertext = vec![0u8; padded.len() + BLOCK_SIZE];
+    let count = crypter.update(&padded, &mut ciphertext)?;
+    let rest = crypter.finalize(&mut ciphertext[count..])?;
+    ciphertext.truncate(count + rest);
+
+    let mut output = iv;
+    output.extend(ciphertext);
+    Ok(output)
+}
+
+fn handle_connection(mut stream: TcpStream, key: &[u8]) -> Result<()> {
+    let mut child = Command::new("libcamera-vid")
+        .args([
+            "-t", "0",
+            "--width", "640",
+            "--height", "480",
+            "--framerate", "30",
+            "--codec", "yuv420",
+            "--inline",
+            "--output", "-",
+        ])
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to start libcamera-vid");
+
+    let mut reader = BufReader::new(child.stdout.take().unwrap());
+
+    loop {
+        let mut buffer = vec![0u8; FRAME_SIZE];
+        reader.read_exact(&mut buffer)?; // Read full YUV420 frame
+
+        let encrypted = encrypt_frame(&buffer, key)?;
+        println!("[Pi #1] Encrypted frame size: {}", encrypted.len());
+
+        stream.write_u32::<BigEndian>(encrypted.len() as u32)?;
+        stream.write_all(&encrypted)?;
+    }
+}
+
+fn main() -> Result<()> {
+    let key = generate_key()?;
+    let listener = TcpListener::bind("0.0.0.0:12364")?;
+    println!("[Pi #1] Listening on port 12364...");
+
+    let (stream, addr) = listener.accept()?;
+    println!("[Pi #1] Connection from {:?}", addr);
+
+    handle_connection(stream, &key)?;
+    Ok(())
+}
