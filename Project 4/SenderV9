@@ -1,0 +1,88 @@
+import firebase_admin
+from firebase_admin import credentials, db
+import time, socket, os
+import cv2
+import numpy as np
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from picamera2 import Picamera2
+
+# Firebase setup
+cred = credentials.Certificate("/home/bwang/Desktop/finals/serviceAccountKey.json")
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://ece4301-finaldatabase-default-rtdb.firebaseio.com/'
+})
+
+# AES encryption key (must match receiver)
+key = b'0123456789abcdef0123456789abcdef'
+aesgcm = AESGCM(key)
+
+# Receiver ngrok info
+receiver_host = '6.tcp.us-cal-1.ngrok.io'
+receiver_port = 14630
+
+already_connected = False
+
+def encrypt_and_send(frame, conn):
+    _, buffer = cv2.imencode('.jpg', frame)
+    data = buffer.tobytes()
+    nonce = os.urandom(12)
+    encrypted = aesgcm.encrypt(nonce, data, None)
+    packet = nonce + encrypted
+    conn.sendall(len(packet).to_bytes(4, 'big') + packet)
+
+def connect_to_receiver(host, port, retry_interval=5):
+    while True:
+        try:
+            print(f"Trying to connect to receiver at {host}:{port}...")
+            sock = socket.socket()
+            sock.settimeout(10)
+            sock.connect((host, port))
+            print("Connected to receiver.")
+            return sock
+        except Exception as e:
+            print(f"Connection failed: {e}")
+            time.sleep(retry_interval)
+
+
+# Always create a new instance of Picamera2
+picam2 = Picamera2()
+video_config = picam2.create_video_configuration(main={"size": (640, 480)})
+picam2.configure(video_config)
+while True:
+    command = db.reference('stream_command').get()
+    if command == "start":
+        print("Starting stream...")
+        try:
+            if already_connected is False:
+                sock = connect_to_receiver(receiver_host, receiver_port)
+                already_connected = True
+                
+
+            
+            picam2.start()
+            print("Camera started.")
+
+            while True:
+                frame = picam2.capture_array()
+                if frame is None:
+                    print("Failed to capture frame.")
+                    continue
+
+                try:
+                    encrypt_and_send(frame, sock)
+                except BrokenPipeError:
+                    print("Broken pipe - receiver disconnected.")
+                    break
+
+                if db.reference('stream_command').get() == "stop":
+                    print("Stop command received.")
+                    picam2.stop()
+                    break
+
+                time.sleep(0.03)
+
+        except Exception as e:
+            print("Error:", e)
+
+
+    time.sleep(2)
