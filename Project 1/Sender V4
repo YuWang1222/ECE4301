@@ -1,0 +1,72 @@
+# Pi #1 (bwang@brandenpi) - paired with receiver v5
+import os
+import socket
+import cv2
+import struct
+from picamera2 import Picamera2
+import numpy as np
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
+
+# Initialize camera
+picam2 = Picamera2()
+picam2.configure(picam2.create_video_configuration(main={"size": (640, 480)}))
+picam2.start()
+
+# Generate random 16-byte AES key
+key = os.urandom(16)  # 16 bytes = 128 bits
+block_size = 16
+
+# Save key to file (to later transfer securely to Pi #2)
+key_file_path = "/home/bwang/aes_key.bin"
+with open(key_file_path, "wb") as f:
+    f.write(key)
+print(f"[Pi #1] AES key generated and saved to {key_file_path}")
+
+server_ip = '172.20.10.2'  #put Marwah's wlan0 inet ip 
+server_port = 12364
+
+# Setup socket
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.bind(('0.0.0.0', server_port))
+server_socket.listen(1)
+print(f"[Pi #1] Server listening on {server_ip}:{server_port}...")
+
+connection, client_address = server_socket.accept()
+print(f"[Pi #1] Connected to {client_address}")
+
+def encrypt_frame(frame, key):
+    iv = os.urandom(block_size)
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+
+    frame_bytes = frame.tobytes()
+    padder = padding.PKCS7(block_size * 8).padder()
+    padded_data = padder.update(frame_bytes) + padder.finalize()
+
+    encrypted_frame = encryptor.update(padded_data) + encryptor.finalize()
+    return iv + encrypted_frame
+
+try:
+    while True:
+        frame = picam2.capture_array()
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+        encrypted_frame = encrypt_frame(frame_bgr, key)
+
+        # Send frame length
+        connection.sendall(struct.pack('!I', len(encrypted_frame)))
+        # Send encrypted frame
+        connection.sendall(encrypted_frame)
+
+        # Optional debug window
+        cv2.imshow("Original Video Stream (Pi #1)", frame_bgr)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+finally:
+    picam2.stop()
+    connection.close()
+    server_socket.close()
+    cv2.destroyAllWindows()
