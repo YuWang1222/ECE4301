@@ -1,0 +1,35 @@
+Receiver perf results:
+marwah555@marwahpi:~ $ perf stat -e instructions,cycles,cache-misses,branches,branch-misses,cpu-clock,task-clock sleep 5
+
+ Performance counter stats for 'sleep 5':
+
+           143,375      instructions:u                   #    0.57  insn per cycle            
+           250,867      cycles:u                         #    0.408 GHz                       
+             2,343      cache-misses:u                                                        
+            31,979      branches:u                       #   51.955 M/sec                     
+             2,722      branch-misses:u                  #    8.51% of all branches           
+              0.62 msec cpu-clock:u                      #    0.000 CPUs utilized             
+              0.62 msec task-clock:u                     #    0.000 CPUs utilized             
+
+       5.001290815 seconds time elapsed
+
+       0.001342000 seconds user
+       0.000000000 seconds sys
+
+Sender perf result:
+bwang@brandenpi:~ $ perf stat -e instructions,cycles,cache-misses,branches,branch-misses,cpu-clock,task-clock sleep 5
+
+ Performance counter stats for 'sleep 5':
+
+           150,357      instructions:u                   #    0.60  insn per cycle            
+           251,189      cycles:u                         #    0.392 GHz                       
+             2,431      cache-misses:u                                                        
+            34,562      branches:u                       #   53.958 M/sec                     
+             2,802      branch-misses:u                  #    8.11% of all branches           
+              0.64 msec cpu-clock:u                      #    0.000 CPUs utilized             
+              0.65 msec task-clock:u                     #    0.000 CPUs utilized             
+
+       5.003137619 seconds time elapsed
+
+       0.001688000 seconds user
+       0.000000000 seconds sys
