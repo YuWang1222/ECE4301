@@ -1,0 +1,75 @@
+import cv2
+import socket
+import struct
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.backends import default_backend
+import numpy as np
+import base64
+
+# Load AES key from file
+aes_key_path = "/home/marwah555/aes_key.bin"
+with open(aes_key_path, "rb") as key_file:
+    key = key_file.read()
+
+block_size = 16
+
+receiver_ip = '172.20.10.3' #put Branden's wlan0 inet ip
+receiver_port = 12364
+server_address = (receiver_ip, receiver_port)
+
+client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client_socket.connect(server_address)
+print(f"Pi #2: Connected to sender at {server_address}")
+
+def recvall(sock, length):
+    data = b''
+    while len(data) < length:
+        more = sock.recv(length - len(data))
+        if not more:
+            raise EOFError("Socket closed before receiving all data")
+        data += more
+    return data
+
+def decrypt_frame(encrypted_data, key):
+    iv = encrypted_data[:block_size]
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+
+    decrypted_data = decryptor.update(encrypted_data[block_size:]) + decryptor.finalize()
+
+    unpadder = padding.PKCS7(block_size * 8).unpadder()
+    frame_data = unpadder.update(decrypted_data) + unpadder.finalize()
+
+    frame = np.frombuffer(frame_data, dtype=np.uint8).reshape((480, 640, 3))
+    return frame
+
+while True:
+    length_data = recvall(client_socket, 4)
+    if not length_data:
+        break
+    frame_length = struct.unpack('!I', length_data)[0]
+
+    encrypted_frame = recvall(client_socket, frame_length)
+    decrypted_frame = decrypt_frame(encrypted_frame, key)
+
+    encrypted_text = base64.b64encode(encrypted_frame[:150]).decode('utf-8')
+
+    text_display = np.ones((480, 640, 3), dtype=np.uint8) * 255
+
+    y0, dy = 30, 30
+    for i, line in enumerate([encrypted_text[i:i+80] for i in range(0, len(encrypted_text), 80)]):
+        y = y0 + i * dy
+        cv2.putText(text_display, line, (10, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1, cv2.LINE_AA)
+        if i > 10:
+            break
+
+    combined_frame = np.hstack((text_display, decrypted_frame))
+
+    cv2.imshow("Encrypted (Text on left) & Decrypted (Image on right)", combined_frame)
+
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+client_socket.close()
+cv2.destroyAllWindows()
